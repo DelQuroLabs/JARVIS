@@ -1,0 +1,437 @@
+{
+  "results": [
+    {
+      "name": "memory: add an item, it appears and the count updates",
+      "ok": true,
+      "detail": "item listed, subtitle counts it",
+      "ms": 1733
+    },
+    {
+      "name": "memory: the item survives a reload (persisted, not in React state)",
+      "ok": true,
+      "detail": "localStorage round trip",
+      "ms": 762
+    },
+    {
+      "name": "memory: search filters the list",
+      "ok": true,
+      "detail": "miss shows empty state, hit shows the item",
+      "ms": 848
+    },
+    {
+      "name": "memory: pin toggles and reorders to the top",
+      "ok": true,
+      "detail": "pinned item moved to the top",
+      "ms": 1574
+    },
+    {
+      "name": "memory: delete removes the item and decrements the count",
+      "ok": true,
+      "detail": "gone from list and count",
+      "ms": 438
+    },
+    {
+      "name": "ideas: create, star, and it persists",
+      "ok": true,
+      "detail": "created, starred, survived reload",
+      "ms": 2705
+    },
+    {
+      "name": "tools: calculator returns the right number",
+      "ok": true,
+      "detail": "137 * 42 = 5754",
+      "ms": 2532
+    },
+    {
+      "name": "tools: a bad argument fails honestly instead of pretending",
+      "ok": true,
+      "detail": "reported as failed",
+      "ms": 3046
+    },
+    {
+      "name": "tools: a keyless network tool actually reaches the internet",
+      "ok": true,
+      "detail": "100 USD = 86.04 EUR Rate 0.86044 as published on 2026-09-04.",
+      "ms": 5658
+    },
+    {
+      "name": "tools: the malformed-currency guard rejects before calling out",
+      "ok": true,
+      "detail": "rejected \"dollars\" with a clear reason",
+      "ms": 3109
+    },
+    {
+      "name": "chat: a slash command runs on device and shows a result",
+      "ok": true,
+      "detail": "/calc 19 * 3 -> 57",
+      "ms": 2387
+    },
+    {
+      "name": "chat: \"remember that ...\" writes to memory with no model call",
+      "ok": true,
+      "detail": "written to memory",
+      "ms": 2408
+    },
+    {
+      "name": "chat: the conversation persists across a reload",
+      "ok": true,
+      "detail": "history restored",
+      "ms": 2072
+    },
+    {
+      "name": "chat: offline reflex answers an identity question with no key",
+      "ok": true,
+      "detail": "answered offline",
+      "ms": 3579
+    },
+    {
+      "name": "palette: opens from the toolbar and navigates",
+      "ok": true,
+      "detail": "navigated to /app/memory",
+      "ms": 2155
+    },
+    {
+      "name": "skills: create one and it appears in the list",
+      "ok": true,
+      "detail": "skill saved and listed",
+      "ms": 2293
+    },
+    {
+      "name": "routines: create one, toggle it, and it persists",
+      "ok": true,
+      "detail": "created and persisted",
+      "ms": 2858
+    },
+    {
+      "name": "workflows: a seeded template runs and reports a real status",
+      "ok": true,
+      "detail": "ok",
+      "ms": 7250
+    },
+    {
+      "name": "modes: selecting a mode sticks and is reflected elsewhere",
+      "ok": true,
+      "detail": "mode changed and surfaced on Home",
+      "ms": 1805
+    },
+    {
+      "name": "privacy: STRICT actually blocks a network tool",
+      "ok": true,
+      "detail": "network tool blocked under STRICT",
+      "ms": 4873
+    },
+    {
+      "name": "providers: saving a key flips the connected count and the pill",
+      "ok": true,
+      "detail": "1 of 24 connected",
+      "ms": 1561
+    },
+    {
+      "name": "providers: the saved key survives a reload and is masked",
+      "ok": true,
+      "detail": "persisted and masked",
+      "ms": 1429
+    },
+    {
+      "name": "providers: reordering the fallback chain persists",
+      "ok": true,
+      "detail": "Groq -> Cerebras",
+      "ms": 1997
+    },
+    {
+      "name": "providers: removing a provider from the chain persists",
+      "ok": true,
+      "detail": "4 -> 3 entries",
+      "ms": 550
+    },
+    {
+      "name": "providers: a bad key reports the real failure, not success",
+      "ok": true,
+      "detail": "failure surfaced honestly",
+      "ms": 12978
+    },
+    {
+      "name": "settings: theme switch changes the document attribute",
+      "ok": true,
+      "detail": "light applied and persisted",
+      "ms": 2015
+    },
+    {
+      "name": "settings: accent switch repaints the accent token",
+      "ok": true,
+      "detail": "#35e0c0 -> #b6f24a",
+      "ms": 1860
+    },
+    {
+      "name": "settings: export produces JSON with no credentials in it",
+      "ok": true,
+      "detail": "30.9 kB, no key inside",
+      "ms": 558
+    },
+    {
+      "name": "diagnostics: live checks run and report counts",
+      "ok": true,
+      "detail": "19 passed, 0 failed",
+      "ms": 9552
+    },
+    {
+      "name": "traces: activity from this session was recorded",
+      "ok": true,
+      "detail": "entries present",
+      "ms": 511
+    },
+    {
+      "name": "cloud: connecting with a bogus URL fails honestly",
+      "ok": true,
+      "detail": "no false success",
+      "ms": 9626
+    },
+    {
+      "name": "crew: a run reports per-role status without a model key",
+      "ok": true,
+      "detail": "failed",
+      "ms": 10557
+    },
+    {
+      "name": "agent: a task reports steps and a final state",
+      "ok": true,
+      "detail": "reported a state",
+      "ms": 12580
+    },
+    {
+      "name": "reset: erasing all data actually clears it",
+      "ok": true,
+      "detail": "all local data cleared",
+      "ms": 2806
+    },
+    {
+      "name": "dashboard: the app opens on the dashboard, not the old landing page",
+      "ok": true,
+      "detail": "dashboard renders at /",
+      "ms": 1275
+    },
+    {
+      "name": "dashboard: the former landing page is hidden but not deleted",
+      "ok": true,
+      "detail": "still reachable at /former-landing",
+      "ms": 511
+    },
+    {
+      "name": "dashboard: every launcher tile actually navigates",
+      "ok": true,
+      "detail": "19 tiles all navigate",
+      "ms": 18416
+    },
+    {
+      "name": "dashboard: tiles reorder by drag and the order persists",
+      "ok": true,
+      "detail": "chat -> position 4",
+      "ms": 3745
+    },
+    {
+      "name": "dashboard: a tile can be hidden and restored",
+      "ok": true,
+      "detail": "hid and restored chat",
+      "ms": 2659
+    },
+    {
+      "name": "dashboard: a new tile is appended rather than dropped",
+      "ok": true,
+      "detail": "3 saved -> 19 shown",
+      "ms": 1369
+    },
+    {
+      "name": "weather: a sheet opened from the dashboard is actually clickable",
+      "ok": true,
+      "detail": "sheet actions are on top",
+      "ms": 1089
+    },
+    {
+      "name": "weather: a typed city fetches a real reading in Fahrenheit",
+      "ok": true,
+      "detail": "78° in Jersey City",
+      "ms": 6432
+    },
+    {
+      "name": "weather: the units toggle converts without refetching",
+      "ok": true,
+      "detail": "78°F -> 26°C",
+      "ms": 1941
+    },
+    {
+      "name": "library: seeded projects render as cards",
+      "ok": true,
+      "detail": "2 cards",
+      "ms": 511
+    },
+    {
+      "name": "library: a card opens the full record with spec and links",
+      "ok": true,
+      "detail": "about, spec and tabs all render",
+      "ms": 1383
+    },
+    {
+      "name": "library: create a project, and it persists",
+      "ok": true,
+      "detail": "created and persisted",
+      "ms": 2852
+    },
+    {
+      "name": "library: an invalid link is refused before saving",
+      "ok": true,
+      "detail": "rejected with a stated reason",
+      "ms": 1666
+    },
+    {
+      "name": "library: search narrows the grid",
+      "ok": true,
+      "detail": "miss and hit both correct",
+      "ms": 1605
+    },
+    {
+      "name": "help: the tour renders and its numbers come from the registries",
+      "ok": true,
+      "detail": "49 tools reported",
+      "ms": 513
+    },
+    {
+      "name": "help: every chapter opens",
+      "ok": true,
+      "detail": "6 chapters open",
+      "ms": 1740
+    },
+    {
+      "name": "radar: tiles actually load for the saved location",
+      "ok": true,
+      "detail": "9 basemap + 9 radar tiles",
+      "ms": 5520
+    },
+    {
+      "name": "weather: three sources are fetched and listed individually",
+      "ok": true,
+      "detail": "3/3 answered",
+      "ms": 7515
+    },
+    {
+      "name": "weather: the merged reading agrees with the sources it merged",
+      "ok": true,
+      "detail": "78° within [78, 78]",
+      "ms": 6515
+    },
+    {
+      "name": "weather: the rain and snow strip renders real bars",
+      "ok": true,
+      "detail": "12 hours",
+      "ms": 6512
+    },
+    {
+      "name": "weather: air quality is reported with its band",
+      "ok": true,
+      "detail": "AQI 52 · moderate",
+      "ms": 6509
+    },
+    {
+      "name": "weather: the dashboard refresh interval is ten minutes",
+      "ok": true,
+      "detail": "cached with a timestamp",
+      "ms": 4
+    },
+    {
+      "name": "briefing: the brief button produces a spoken-or-shown summary",
+      "ok": true,
+      "detail": "Good evening. It is 78 degrees, partly cloudy in Jersey City",
+      "ms": 5366
+    },
+    {
+      "name": "sheets: every bottom sheet is tappable, not trapped under the tab bar",
+      "ok": true,
+      "detail": "quick actions + 5 sheets clear of the tab bar",
+      "ms": 7415
+    },
+    {
+      "name": "storage: data saved by an older build never crashes the app",
+      "ok": true,
+      "detail": "booted clean on six stale keys",
+      "ms": 3084
+    },
+    {
+      "name": "storage: a stale value is discarded, not handed to the UI",
+      "ok": true,
+      "detail": "incompatible payloads cleared",
+      "ms": 5
+    },
+    {
+      "name": "radar: drag to move, zoom, and recentre all work",
+      "ok": true,
+      "detail": "panned, zoomed 7->8, recentred",
+      "ms": 10323
+    },
+    {
+      "name": "radar: the timeline states how far back it actually reaches",
+      "ok": true,
+      "detail": "120 min of history, limit stated",
+      "ms": 7014
+    },
+    {
+      "name": "radar: the forecast section is labelled as a forecast, not radar",
+      "ok": true,
+      "detail": "12 forecast columns",
+      "ms": 7013
+    },
+    {
+      "name": "calendar: a real Google export imports and lists events",
+      "ok": true,
+      "detail": "4 event rows, 1 calendar(s)",
+      "ms": 2028
+    },
+    {
+      "name": "calendar: the import survives a reload and can be removed",
+      "ok": true,
+      "detail": "persisted, then removed",
+      "ms": 2666
+    },
+    {
+      "name": "calendar: a non-calendar file is refused with a readable reason",
+      "ok": true,
+      "detail": "refused with a reason",
+      "ms": 1420
+    },
+    {
+      "name": "calendar: the screen states why URL subscription is impossible",
+      "ok": true,
+      "detail": "limitation stated, no dead control",
+      "ms": 514
+    },
+    {
+      "name": "memory: a pasted markdown block imports after review",
+      "ok": true,
+      "detail": "2 candidates, imported",
+      "ms": 2435
+    },
+    {
+      "name": "memory: importing the same block twice adds nothing",
+      "ok": true,
+      "detail": "duplicate rejected",
+      "ms": 3539
+    },
+    {
+      "name": "memory: a PDF is refused with the reason and a real alternative",
+      "ok": true,
+      "detail": "refused with an alternative",
+      "ms": 1858
+    },
+    {
+      "name": "typing: fields accept continuous input, not one character",
+      "ok": true,
+      "detail": "3 sheets accept full input",
+      "ms": 4504
+    },
+    {
+      "name": "copy: a blocked clipboard is reported, never faked",
+      "ok": true,
+      "detail": "failure surfaced with a fallback",
+      "ms": 7372
+    }
+  ],
+  "consoleErrors": []
+}

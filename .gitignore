@@ -1,0 +1,19 @@
+node_modules/
+dist/
+test/.build/
+artifacts/screens/
+artifacts/e2e-report.json
+*.local
+.DS_Store
+artifacts/iframe-check.json
+artifacts/iframe-check.png
+artifacts/shot-*.png
+
+# Server
+server/node_modules/
+server/dist/
+server/data/
+*.db
+*.db-wal
+*.db-shm
+src/core/supabase.ts.bak
