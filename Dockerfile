@@ -23,8 +23,12 @@ COPY --from=base /app/server ./server
 COPY --from=base /app/dist ./dist
 RUN mkdir -p /app/server/data
 
+# Run from the server directory so its own node_modules (tsx included) are used;
+# nothing is downloaded at container start.
+WORKDIR /app/server
 EXPOSE 3001
+# Health check follows $PORT so a platform that overrides it (Coolify does) still passes.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3001/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["npx", "tsx", "server/src/index.ts"]
+CMD ["npx", "--no-install", "tsx", "src/index.ts"]

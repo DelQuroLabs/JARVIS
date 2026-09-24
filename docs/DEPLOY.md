@@ -32,7 +32,7 @@ git push -u origin main
 3. Build settings:
    - Build pack: **Dockerfile**
    - Dockerfile location: `/Dockerfile`
-   - Port exposed: **3001**
+   - Ports Exposes: **3001** (Coolify injects this as `PORT`; the server and its health check both follow it, so 3000 also works as long as this field and the health-check port match)
    - Health check: path `/healthz`, port `3001` (the image also has a Docker HEALTHCHECK)
 4. **Domains**: `https://jarvis.delquro.com` — Coolify's Traefik issues the Let's Encrypt cert automatically once DNS resolves. Turn on **Force HTTPS**.
 5. **Persistent storage → + Volume**: name `jarvis-data`, destination path **`/app/server/data`**. Without this the SQLite DB is wiped on every deploy.
