@@ -1,0 +1,293 @@
+{
+  "when": "2026-09-05T19:31:19.863Z",
+  "base": "http://localhost:4173",
+  "total": 57,
+  "failed": 0,
+  "results": [
+    {
+      "name": "phone /",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /guide",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /privacy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/chat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/agent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/build",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/more",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/tools",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/skills",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/workflows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/crew",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/routines",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/memory",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/traces",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/modes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/ideas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/cloud",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/providers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/diagnostics",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/library",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/help",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/weather",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "phone /app/calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /guide",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /privacy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/chat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/agent",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/build",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/more",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/tools",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/skills",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/workflows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/crew",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/routines",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/memory",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/traces",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/modes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/ideas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/cloud",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/settings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/providers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/diagnostics",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/library",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/help",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/weather",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "desktop /app/calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chat answers an identity question with zero network calls",
+      "ok": true,
+      "detail": "reply rendered, 0 outbound requests"
+    },
+    {
+      "name": "chat runs the calculator tool and shows the result",
+      "ok": true,
+      "detail": "tool result 19481 shown"
+    },
+    {
+      "name": "the conversation survives a reload",
+      "ok": true,
+      "detail": "persisted to localStorage"
+    },
+    {
+      "name": "an approval-gated tool asks before running",
+      "ok": true,
+      "detail": "gate surfaced"
+    },
+    {
+      "name": "diagnostics runs its live checks",
+      "ok": true,
+      "detail": "19 passed, 0 blocked with a reason"
+    },
+    {
+      "name": "a workflow template runs end to end",
+      "ok": true,
+      "detail": "status ok, every non-ok node carries a reason"
+    },
+    {
+      "name": "the app still works offline",
+      "ok": true,
+      "detail": "shell rendered from cache"
+    }
+  ]
+}

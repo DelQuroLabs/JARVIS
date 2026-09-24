@@ -1,0 +1,46 @@
+{
+  "origin": "http://127.0.0.1:4173",
+  "results": [
+    {
+      "name": "app boots inside an opaque-origin iframe",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "no fatal errors at module scope",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "bottom tab bar renders 4 destinations",
+      "ok": true,
+      "note": "saw 4"
+    },
+    {
+      "name": "centre action button is present",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "centre button opens the quick-action sheet",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "command palette opens from the toolbar",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "palette search returns matches",
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "no anchors that the sandbox would silently refuse",
+      "ok": true,
+      "note": "saw 0"
+    }
+  ],
+  "errors": []
+}
