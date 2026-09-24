@@ -1,0 +1,35 @@
+{
+  "name": "JARVIS - agent workspace",
+  "short_name": "JARVIS",
+  "description": "A local-first agent workspace: plans, uses tools, runs sandboxed code, and remembers. Your data stays on your device.",
+  "start_url": "./#/app",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#07090d",
+  "theme_color": "#07090d",
+  "categories": ["productivity", "utilities", "developer"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "./share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [{ "name": "files", "accept": ["image/*"] }]
+    }
+  },
+  "shortcuts": [
+    { "name": "New chat", "short_name": "Chat", "url": "./#/app/chat" },
+    { "name": "Agent console", "short_name": "Agent", "url": "./#/app/agent" },
+    { "name": "Workflows", "short_name": "Flows", "url": "./#/app/workflows" }
+  ]
+}
