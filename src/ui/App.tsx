@@ -113,7 +113,12 @@ function Router() {
   const wfEdit = match('/app/workflows/:id', route);
   const screen = (() => {
     if (wfEdit) return <WorkflowEditor id={wfEdit.id} />;
-    switch (route.replace(/\/$/, '')) {
+    // Root and empty hash should go to dashboard (per original behavior)
+    // Only truly unknown routes go to NotFound
+    const clean = route.replace(/\/$/, '');
+    if (clean === '' || clean === '/' || clean === '#') return <Home />;
+    switch (clean) {
+      case '/':
       case '/app':
         return <Home />;
       case '/app/chat':
