@@ -123,6 +123,8 @@ export interface ProviderConfig {
   key?: string;
   model?: string;
   baseUrl?: string;
+  /** Optional model per abstract tier (e.g. code -> gpt-6-sol). Falls back to `model`. */
+  modelByTier?: Partial<Record<string, string>>;
 }
 
 /** Stored credentials for one provider. The key never leaves the device unless
@@ -131,6 +133,7 @@ export interface ProviderCreds {
   key?: string;
   model?: string;
   baseUrl?: string;
+  modelByTier?: Partial<Record<string, string>>;
 }
 
 /**

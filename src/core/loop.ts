@@ -2,7 +2,7 @@
 // maxSteps and toolBudget are hard caps and are actually enforced (a budget of 0
 // means zero tools execute, not "tools discouraged").
 
-import type { LoopStep, Msg, RunOptions, RunResult, ToolCall, ToolCallRecord, ToolSpec } from './types.ts';
+import type { LoopStep, Msg, ProviderConfig, RunOptions, RunResult, ToolCall, ToolCallRecord, ToolSpec } from './types.ts';
 import { TOOL_MAP, selectTools } from './tools.ts';
 import { chatWithFallback, specOf } from './providers.ts';
 import { matchIntent } from './intents.ts';
@@ -10,7 +10,7 @@ import { reflex } from './reflex.ts';
 import { scan, networkAllowed } from './privacy.ts';
 import { estTokens, uid } from './util.ts';
 import { recallBlock } from './recall.ts';
-import { systemFor } from './modes.ts';
+import { systemFor, DEFAULT_TIER } from './modes.ts';
 
 function fmtToolResult(r: ToolCallRecord): string {
   const head = `${r.tool} -> ${r.ok ? 'ok' : 'failed'}: ${r.summary}`;
@@ -123,7 +123,7 @@ export async function runAgent(messages: Msg[], opts: RunOptions): Promise<RunRe
     tokensIn += work.reduce((n, m) => n + estTokens(m.content), 0);
     const res = await chatWithFallback(
       {
-        provider: opts.provider,
+        provider: providerForMode(opts.provider, opts.mode.id),
         messages: work,
         system,
         tools: budget > 0 ? available : [],
@@ -235,4 +235,11 @@ export async function runAgent(messages: Msg[], opts: RunOptions): Promise<RunRe
 
   step('respond', `Answered via ${specOf(via as never)?.label ?? via}`, `${calls.length} tool call(s), ${tokensIn + tokensOut} est. tokens`);
   return { text: finalText, steps, calls, via, degraded, tokensIn, tokensOut };
+}
+
+/** The provider config with the model swapped for this mode's tier override, if any. */
+export function providerForMode(p: ProviderConfig, modeId: string): ProviderConfig {
+  const tier = DEFAULT_TIER[modeId];
+  const m = tier ? p.modelByTier?.[tier] : undefined;
+  return m && m !== p.model ? { ...p, model: m } : p;
 }

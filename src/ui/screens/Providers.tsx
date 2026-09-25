@@ -3,9 +3,45 @@ import { Shell } from '../Shell.tsx';
 import { Btn, Card, Field, IconBtn, Input, OpenLink, Pill, SectionTitle, Select, Toggle } from '../components.tsx';
 import { Icon } from '../icons.tsx';
 import { useApp } from '../state.tsx';
-import { PROVIDERS, SELECTABLE, hasCredential, specOf, DEFAULT_BASE_URL } from '../../core/providers.ts';
+import { PROVIDERS, SELECTABLE, hasCredential, specOf, DEFAULT_BASE_URL, OPENAI_MODELS } from '../../core/providers.ts';
 import { SERVICES, connectedServices } from '../../core/services.ts';
 import type { ProviderId, ProviderSpec, ProviderTier } from '../../core/types.ts';
+
+/** Model dropdown options; OpenAI gets friendly labels with list prices. */
+function modelOptions(id: ProviderId, models: readonly string[]) {
+  if (id !== 'openai') return models.map((m) => ({ value: m, label: m }));
+  return OPENAI_MODELS.map((m) => ({ value: m.id, label: `${m.label}  ·  $${m.in}/$${m.out} per M` }));
+}
+
+/** Which modes may run on a different model than the day-to-day one. */
+const MODE_MODEL_SLOTS: { tier: string; label: string; hint: string }[] = [
+  { tier: 'code', label: 'Build mode', hint: 'writing and fixing code' },
+  { tier: 'reasoning', label: 'Deep mode', hint: 'hard multi-step problems' },
+  { tier: 'research', label: 'Research mode', hint: 'long reads and sources' },
+];
+
+function PerModeModels({ id, cfg, onChange }: { id: ProviderId; cfg: { model?: string; modelByTier?: Partial<Record<string, string>> }; onChange: (m: Partial<Record<string, string>>) => void }) {
+  const spec = specOf(id);
+  if (spec.models.length < 2) return null;
+  const base = cfg.model ?? spec.model;
+  const byTier = cfg.modelByTier ?? {};
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="dim" style={{ fontSize: '0.78rem', marginBottom: 6 }}>
+        Per-mode models · the model above is used day to day; pick a stronger one only where it pays off.
+      </div>
+      {MODE_MODEL_SLOTS.map((slot) => (
+        <Field key={slot.tier} label={`${slot.label} · ${slot.hint}`}>
+          <Select
+            value={byTier[slot.tier] ?? ''}
+            onChange={(v) => { const next = { ...byTier }; if (v) next[slot.tier] = v; else delete next[slot.tier]; onChange(next); }}
+            options={[{ value: '', label: `Same as day-to-day (${base})` }, ...modelOptions(id, spec.models)]}
+          />
+        </Field>
+      ))}
+    </div>
+  );
+}
 
 const TIER_LABEL: Record<ProviderTier, string> = {
   free: 'Free tier',
@@ -58,7 +94,7 @@ export default function Providers() {
     [app, keyring, activeId],
   );
 
-  const setCreds = (id: ProviderId, patch: { key?: string; model?: string; baseUrl?: string }) => {
+  const setCreds = (id: ProviderId, patch: { key?: string; model?: string; baseUrl?: string; modelByTier?: Partial<Record<string, string>> }) => {
     app.setSettings({ keyring: { ...keyring, [id]: { ...(keyring[id] ?? {}), ...patch } } });
     // Keep the active provider config in step, so nothing depends on load order.
     if (id === activeId) app.setSettings({ provider: { ...app.settings.provider, ...patch } });
@@ -67,7 +103,7 @@ export default function Providers() {
   const makeActive = (id: ProviderId) => {
     const creds = keyring[id] ?? {};
     app.setSettings({
-      provider: { id, key: creds.key, model: creds.model ?? specOf(id).model, baseUrl: creds.baseUrl ?? DEFAULT_BASE_URL[id] },
+      provider: { id, key: creds.key, model: creds.model ?? specOf(id).model, baseUrl: creds.baseUrl ?? DEFAULT_BASE_URL[id], modelByTier: creds.modelByTier },
     });
     app.toast(`${specOf(id).label} is now the main brain.`, 'ok');
   };
@@ -132,13 +168,14 @@ export default function Providers() {
             }))}
           />
         </Field>
-        <Field label="Model">
+        <Field label="Model · day to day">
           <Select
             value={app.settings.provider.model ?? specOf(activeId).model}
             onChange={(v) => setCreds(activeId, { model: v })}
-            options={specOf(activeId).models.map((m) => ({ value: m, label: m }))}
+            options={modelOptions(activeId, specOf(activeId).models)}
           />
         </Field>
+        <PerModeModels id={activeId} cfg={app.settings.provider} onChange={(m) => setCreds(activeId, { modelByTier: m })} />
         <div className="row wrap" style={{ gap: 6 }}>
           <Pill tone={hasCredential(activeId, keyring) ? 'ok' : 'warn'}>
             {hasCredential(activeId, keyring) ? 'ready' : 'needs a key'}
@@ -301,10 +338,10 @@ function ProviderRow({
   onToggle: () => void;
   ready: boolean;
   active: boolean;
-  creds: { key?: string; model?: string; baseUrl?: string };
+  creds: { key?: string; model?: string; baseUrl?: string; modelByTier?: Partial<Record<string, string>> };
   busy: boolean;
   result?: { ok: boolean; detail: string; cors?: boolean };
-  onCreds: (patch: { key?: string; model?: string; baseUrl?: string }) => void;
+  onCreds: (patch: { key?: string; model?: string; baseUrl?: string; modelByTier?: Partial<Record<string, string>> }) => void;
   onTest: () => void;
   onUse: () => void;
   onNote: (text: string, tone?: 'ok' | 'err' | 'info') => void;
@@ -372,7 +409,7 @@ function ProviderRow({
               <Select
                 value={creds.model ?? spec.model}
                 onChange={(v) => onCreds({ model: v })}
-                options={spec.models.map((m) => ({ value: m, label: m }))}
+                options={modelOptions(spec.id, spec.models)}
               />
             </Field>
           )}

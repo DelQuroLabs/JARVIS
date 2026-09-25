@@ -10,7 +10,7 @@ from the Dockerfile on every push to `main`.
 | GitHub repo with this code on `main` | e.g. `github.com/DelQuroLabs/JARVIS` (private is fine) |
 | DNS `A` record `jarvis.delquro.com` → your Coolify server IP | your DNS provider; also `AAAA` if the box has IPv6 |
 | GitHub OAuth App | github.com → Settings → Developer settings → OAuth Apps → New |
-| OpenAI API key | platform.openai.com (default model `gpt-5.6-luna`) |
+| OpenAI API key | platform.openai.com (default model `gpt-6-luna`) |
 | Telegram bot token (optional) | @BotFather |
 
 GitHub OAuth App values:
@@ -49,7 +49,7 @@ OPENAI_API_KEY=sk-…
 # optional
 TELEGRAM_BOT_TOKEN=…
 YOUCOM_API_KEY=…
-OPENAI_MODEL=gpt-5.6-luna
+OPENAI_MODEL=gpt-6-luna
 OPENAI_REASONING_EFFORT=low
 ```
    Do **not** set `PORT` or `DB_PATH` — the image sets them.
@@ -62,7 +62,7 @@ curl https://jarvis.delquro.com/healthz          → {"ok":true}
 curl -I https://jarvis.delquro.com/               → 200 text/html
 ```
 Open the site → Settings → Cloud sync → **Sign in with GitHub** → should round-trip and show your handle.
-Assistant screen → status shows `gpt-5.6-luna` and (if set) the Telegram bot username.
+Assistant screen → status shows `gpt-6-luna` and (if set) the Telegram bot username.
 
 ## 4. CI/CD
 

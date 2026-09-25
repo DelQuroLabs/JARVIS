@@ -22,7 +22,7 @@ export const PRICES: Record<string, { in: number; out: number; note: string }> =
   pollinations: { in: 0, out: 0, note: 'keyless, rate limited' },
   reflex: { in: 0, out: 0, note: 'on-device' },
   tool: { in: 0, out: 0, note: 'on-device' },
-  openai: { in: 0.2, out: 1.2, note: 'gpt-5.6-luna list price' },
+  openai: { in: 0.1, out: 0.5, note: 'gpt-6-luna list price' },
   anthropic: { in: 0.8, out: 4, note: 'claude haiku list price' },
   openrouter: { in: 0.3, out: 0.6, note: 'varies by model' },
   ollama: { in: 0, out: 0, note: 'self-hosted' },

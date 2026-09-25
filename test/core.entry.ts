@@ -26,7 +26,7 @@ export * from '../src/core/library.ts';
 export {
   PROVIDERS, SELECTABLE, specOf, isConfigured,
   hasCredential, parseToolCalls, stripToolBlocks, toolProtocolPrompt,
-  STREAM_IDLE_MS, buildChain, DEFAULT_BASE_URL,
+  STREAM_IDLE_MS, buildChain, DEFAULT_BASE_URL, OPENAI_MODELS, isOpenAIReasoningModel,
 } from '../src/core/providers.ts';
 export * from '../src/core/services.ts';
 export { DEFAULT_SETTINGS, read, write, KEYS, SCHEMA_VERSION } from '../src/core/store.ts';

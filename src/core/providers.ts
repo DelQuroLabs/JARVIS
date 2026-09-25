@@ -19,6 +19,48 @@ import { splitDataUrl } from './attach.ts';
  * browser cannot read the reply). Listing them would be a lie the user only
  * discovers on first use.
  */
+/**
+ * Every active OpenAI chat/reasoning model (catalog + pricing page, 2026-09-25),
+ * newest first. `reasoning` models take reasoning_effort and reject temperature.
+ * Prices are list USD per 1M tokens (short context) for the cost estimate.
+ */
+export const OPENAI_MODELS: ReadonlyArray<{ id: string; label: string; in: number; out: number; reasoning: boolean }> = [
+  { id: 'gpt-6-astra', label: 'GPT-6 Astra · most capable', in: 10, out: 50, reasoning: true },
+  { id: 'gpt-6-sol', label: 'GPT-6 Sol · coding & agents', in: 2, out: 10, reasoning: true },
+  { id: 'gpt-6-luna', label: 'GPT-6 Luna · fast & cheap', in: 0.1, out: 0.5, reasoning: true },
+  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', in: 4, out: 20, reasoning: true },
+  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra', in: 2, out: 12, reasoning: true },
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', in: 0.2, out: 1.2, reasoning: true },
+  { id: 'gpt-5.5', label: 'GPT-5.5', in: 5, out: 30, reasoning: true },
+  { id: 'gpt-5.5-pro', label: 'GPT-5.5 Pro · very expensive', in: 30, out: 180, reasoning: true },
+  { id: 'gpt-5.4', label: 'GPT-5.4', in: 2.5, out: 15, reasoning: true },
+  { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini', in: 0.75, out: 4.5, reasoning: true },
+  { id: 'gpt-5.4-nano', label: 'GPT-5.4 Nano', in: 0.2, out: 1.25, reasoning: true },
+  { id: 'gpt-5.4-pro', label: 'GPT-5.4 Pro · very expensive', in: 30, out: 180, reasoning: true },
+  { id: 'gpt-5.2', label: 'GPT-5.2', in: 1.75, out: 14, reasoning: true },
+  { id: 'gpt-5.2-pro', label: 'GPT-5.2 Pro · very expensive', in: 21, out: 168, reasoning: true },
+  { id: 'gpt-5.1', label: 'GPT-5.1', in: 1.25, out: 10, reasoning: true },
+  { id: 'gpt-5', label: 'GPT-5', in: 1.25, out: 10, reasoning: true },
+  { id: 'gpt-5-mini', label: 'GPT-5 Mini', in: 0.25, out: 2, reasoning: true },
+  { id: 'gpt-5-nano', label: 'GPT-5 Nano', in: 0.05, out: 0.4, reasoning: true },
+  { id: 'gpt-5-pro', label: 'GPT-5 Pro · very expensive', in: 15, out: 120, reasoning: true },
+  { id: 'gpt-4.1', label: 'GPT-4.1', in: 2, out: 8, reasoning: false },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', in: 0.4, out: 1.6, reasoning: false },
+  { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', in: 0.1, out: 0.4, reasoning: false },
+  { id: 'gpt-4o', label: 'GPT-4o', in: 2.5, out: 10, reasoning: false },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', in: 0.15, out: 0.6, reasoning: false },
+  { id: 'o3', label: 'o3', in: 2, out: 8, reasoning: true },
+  { id: 'o3-pro', label: 'o3 Pro · expensive', in: 20, out: 80, reasoning: true },
+  { id: 'o4-mini', label: 'o4 Mini', in: 1.1, out: 4.4, reasoning: true },
+  { id: 'o3-mini', label: 'o3 Mini', in: 1.1, out: 4.4, reasoning: true },
+  { id: 'o1', label: 'o1 · expensive', in: 15, out: 60, reasoning: true },
+];
+
+/** GPT-5/6 and o-series reject `temperature`; they take `reasoning_effort` instead. */
+export function isOpenAIReasoningModel(model: string): boolean {
+  return /^(gpt-5|gpt-6|o\d)/i.test(model);
+}
+
 export const PROVIDERS: ProviderSpec[] = [
   {
     id: 'groq',
@@ -333,8 +375,8 @@ export const PROVIDERS: ProviderSpec[] = [
     cors: 'verified',
     probed: '2026-09-04',
     keyUrl: 'https://platform.openai.com/api-keys',
-    model: 'gpt-5.6-luna',
-    models: ['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.4-nano', 'gpt-4o-mini', 'gpt-4o'],
+    model: 'gpt-6-luna',
+    models: OPENAI_MODELS.map((m) => m.id),
     nativeTools: true,
     systemRole: true,
     multiTurn: true,
@@ -767,12 +809,15 @@ async function callOpenAICompatible(req: ChatRequest, spec: ProviderSpec): Promi
   const { url, headers } = openAIBase(spec.id, req.provider);
   const useNative = spec.nativeTools && !!req.tools?.length;
   const system = useNative ? req.system : [req.system, toolProtocolPrompt(req.tools ?? [])].filter(Boolean).join('\n\n');
+  const model = req.provider.model || spec.model;
   const body: Record<string, unknown> = {
-    model: req.provider.model || spec.model,
+    model,
     messages: toWire(req.messages, spec, system),
     stream: true,
-    temperature: req.temperature ?? 0.6,
   };
+  // Reasoning models refuse `temperature`; hint effort from it instead (low = quick, high = careful).
+  if (spec.id === 'openai' && isOpenAIReasoningModel(model)) body.reasoning_effort = (req.temperature ?? 0.6) <= 0.3 ? 'medium' : 'low';
+  else body.temperature = req.temperature ?? 0.6;
   if (useNative) {
     body.tools = (req.tools ?? []).map((t) => ({
       type: 'function',
