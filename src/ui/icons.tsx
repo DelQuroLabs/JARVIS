@@ -13,7 +13,8 @@ export type IconName =
   | 'sync' | 'star' | 'pin' | 'menu' | 'edit'
   | 'key' | 'rocket' | 'wand' | 'compass' | 'boxes' | 'clock' | 'zap' | 'command'
   | 'sliders' | 'book' | 'heart' | 'trophy' | 'filter' | 'terminal' | 'globe'
-  | 'mail' | 'wallet' | 'contacts' | 'paperplane' | 'image' | 'camera' | 'screen';
+  | 'mail' | 'wallet' | 'contacts' | 'paperplane' | 'image' | 'camera' | 'screen'
+  | 'assistant';
 
 const P: Record<IconName, string> = {
   image: 'M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4 M15.5 9.5h.01',
@@ -23,6 +24,7 @@ const P: Record<IconName, string> = {
   wallet: 'M3 7a2 2 0 0 1 2-2h13v4 M3 7v11a2 2 0 0 0 2 2h15v-4 M3 9h18v5H3z M16 11.5h.01',
   contacts: 'M5 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5z M21 8v2 M21 14v2 M11 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M6.5 18a4.5 4.5 0 0 1 9 0',
   paperplane: 'M22 2L11 13 M22 2l-7 20-4-9-9-4z',
+  assistant: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M5 20a7 7 0 0 1 14 0 M8 11l2 2 4-4',
   key: 'M15.5 3a5.5 5.5 0 1 0-5.2 7.3L3 17.6V21h3.4v-2.2h2.2V16.6h2.1l1.6-1.6A5.5 5.5 0 0 0 15.5 3z M16.4 7.2h.01',
   rocket: 'M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.8-.9.8-2.2-.1-3s-2.2-.8-2.9 0z M12 15l-3-3a19 19 0 0 1 8-9 9 9 0 0 1 4 4 19 19 0 0 1-9 8z M9 12H5s.4-2.4 1.6-3.6C7.9 7 12 7 12 7 M12 15v4s2.4-.4 3.6-1.6C17 16 17 12 17 12',
   wand: 'M15 4V2 M15 16v-2 M8 9h2 M20 9h2 M17.8 11.8l1.4 1.4 M17.8 6.2l1.4-1.4 M12.2 6.2 10.8 4.8 M3 21l9-9',

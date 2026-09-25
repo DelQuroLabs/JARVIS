@@ -32,6 +32,8 @@ export interface Msg {
     tokensOut?: number;
     offline?: boolean;
   };
+  /** Which memories were injected into this prompt — for per-answer disclosure (review fix) */
+  memoriesUsed?: MemoryItem[];
 }
 
 export interface Conversation {

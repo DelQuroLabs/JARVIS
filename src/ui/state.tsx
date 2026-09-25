@@ -57,8 +57,10 @@ export interface AppApi {
 
   memory: MemoryItem[];
   addMemory: (m: Omit<MemoryItem, 'id' | 'created'>) => void;
-  /** Learn durable facts from one exchange (rules, plus a model pass when allowed). Returns what was saved. */
-  learnFrom: (userText: string, assistantText?: string) => Promise<MemoryItem[]>;
+  /** Learn durable facts from one exchange (rules, plus a model pass when allowed). Returns what was saved. 
+   *  FIX: now accepts per-conversation mode & privacy to prevent private conversations being learned.
+   */
+  learnFrom: (userText: string, assistantText?: string, opts?: { mode?: string; privacy?: string; conversationId?: string; turnId?: string }) => Promise<MemoryItem[]>;
   /** Facts the server-side assistant (Telegram) has learned; merged into recall when signed in. */
   serverFacts: string[];
   refreshServerFacts: () => Promise<void>;
@@ -358,18 +360,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return saved;
   }, [writeMemory, refreshServerFacts]);
 
-  const learnFrom = useCallback(async (userText: string, assistantText?: string): Promise<MemoryItem[]> => {
+  const learnFrom = useCallback(async (userText: string, assistantText?: string, opts?: { mode?: string; privacy?: string; conversationId?: string; turnId?: string }): Promise<MemoryItem[]> => {
     const st = settingsRef.current;
-    if (st.autoLearn === 'off' || st.mode === 'private') return [];
+    // FIX: Use per-conversation mode & privacy if provided, not just global settings.
+    // This prevents private conversations from being learned when global mode is standard.
+    const effectiveMode = opts?.mode ?? st.mode;
+    const effectivePrivacy = opts?.privacy ?? st.privacy;
+
+    if (st.autoLearn === 'off' || effectiveMode === 'private') return [];
     const saved = commitLearned(extractFacts(userText));
-    if (st.autoLearn !== 'full' || st.privacy === 'STRICT' || !isConfigured(st.provider)) return saved;
+    if (st.autoLearn !== 'full' || effectivePrivacy === 'STRICT' || !isConfigured(st.provider)) return saved;
     // Model pass: one small call, no mode prompt, only when a real provider is set.
+    // FIX: Apply same privacy redaction path as agent loop — scan & redact before transport.
     try {
+      const { scan } = await import('../core/privacy.ts');
+      const safeUser = scan(userText.slice(0, 3000), effectivePrivacy as never).clean;
+      const safeAssistant = scan((assistantText ?? '').slice(0, 1500), effectivePrivacy as never).clean;
       const known = memoryRef.current.slice(0, 40).map((m) => m.text).concat(serverFacts.slice(0, 20));
+      const safeKnown = known.map(k => scan(k, effectivePrivacy as never).clean);
       const res = await chatWithFallback(
         {
           provider: resolveProvider(st.provider.id),
-          messages: [{ id: uid('m'), role: 'user', content: `KNOWN:\n${known.map((k) => `- ${k}`).join('\n') || '(nothing)'}\n\nUSER SAID:\n${userText.slice(0, 3000)}\n\nASSISTANT REPLIED:\n${(assistantText ?? '').slice(0, 1500)}`, ts: Date.now() }],
+          messages: [{ id: uid('m'), role: 'user', content: `KNOWN:\n${safeKnown.map((k) => `- ${k}`).join('\n') || '(nothing)'}\n\nUSER SAID:\n${safeUser}\n\nASSISTANT REPLIED:\n${safeAssistant}`, ts: Date.now() }],
           system: LEARN_PROMPT,
           temperature: 0,
         },
@@ -499,11 +511,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ): Promise<{ ok: boolean; text: string; via: string; error?: string; blocked?: boolean }> => {
       const mode = modeOf(modeId ?? settingsRef.current.mode);
       const t0 = Date.now();
+      // FIX: Unified memory recall for all paths (Crew, Workflows, Routines previously missed recall)
+      // This ensures app.ask also injects memory like runTask does.
+      let systemPrompt = systemFor(mode);
+      if (mode.id !== 'private') {
+        try {
+          const { recallBlock } = await import('../core/recall.ts');
+          const block = recallBlock(memoryRef.current, prompt, { extra: serverFacts });
+          if (block) systemPrompt = `${systemPrompt}\n\n${block}`;
+        } catch { /* recall is best-effort */ }
+      }
       const res = await chatWithFallback(
         {
           provider: resolveProvider(settingsRef.current.provider.id),
           messages: [{ id: uid('m'), role: 'user', content: prompt, ts: Date.now() }],
-          system: systemFor(mode),
+          system: systemPrompt,
           temperature: mode.temperature,
         },
         {

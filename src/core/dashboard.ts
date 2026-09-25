@@ -29,7 +29,7 @@ export const DASH_TILES: DashTile[] = [
   { id: 'agent', to: '/app/agent', icon: 'agent', label: 'Delegate', sub: 'Plan, act, verify', tone: 'violet', size: 'lg' },
   { id: 'library', to: '/app/library', icon: 'boxes', label: 'Library', sub: 'Every project you run', tone: 'ok', size: 'lg' },
   { id: 'workflows', to: '/app/workflows', icon: 'flow', label: 'Automate', sub: 'Wire steps together', tone: 'sky', size: 'lg' },
-  { id: 'assistant', to: '/app/assistant', icon: 'paperplane', label: 'Assistant', sub: 'Telegram, email, expenses, contacts', tone: 'accent', size: 'lg' },
+  { id: 'assistant', to: '/app/assistant', icon: 'assistant', label: 'Assistant', sub: 'Telegram, email, expenses, contacts', tone: 'accent', size: 'lg' },
   { id: 'calendar', to: '/app/calendar', icon: 'clock', label: 'Calendar', sub: '', tone: 'violet', size: 'sm' },
   { id: 'weather', to: '/app/weather', icon: 'cloud-sun', label: 'Weather', sub: '', tone: 'sky', size: 'sm' },
   { id: 'tools', to: '/app/tools', icon: 'tools', label: 'Tools', sub: '', tone: 'accent', size: 'sm' },

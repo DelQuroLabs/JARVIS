@@ -14,6 +14,7 @@ export default function Memory() {
   const app = useApp();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
+  const [storeTab, setStoreTab] = useState<'all' | 'local' | 'server'>('all');
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ text: '', kind: 'fact' as MemoryItem['kind'], tags: '' });
   const [importing, setImporting] = useState(false);
@@ -69,10 +70,30 @@ export default function Memory() {
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return app.memory
+    const local = app.memory
       .filter((m) => (filter === 'all' || m.kind === filter) && (!t || m.text.toLowerCase().includes(t) || m.tags.some((x) => x.includes(t))))
-      .sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || b.created - a.created);
-  }, [app.memory, q, filter]);
+      .map(m => ({ ...m, _location: 'local' as const }));
+    
+    const server = app.serverFacts
+      .filter(f => !t || f.toLowerCase().includes(t))
+      .map((f, i) => ({
+        id: `server-${i}`,
+        text: f,
+        kind: 'fact' as const,
+        tags: ['server', 'synced'],
+        source: 'server' as const,
+        created: Date.now(),
+        _location: 'server' as const,
+        pinned: false,
+      }));
+
+    let combined: any[] = [];
+    if (storeTab === 'local') combined = local;
+    else if (storeTab === 'server') combined = server;
+    else combined = [...local, ...server];
+
+    return combined.sort((a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false) || (b.created ?? 0) - (a.created ?? 0));
+  }, [app.memory, app.serverFacts, q, filter, storeTab]);
 
   const save = () => {
     if (!draft.text.trim()) return;
@@ -90,13 +111,23 @@ export default function Memory() {
   return (
     <Shell
       title="Memory"
-      sub={`${app.memory.length} items \u00b7 on this device`}
+      sub={`${app.memory.length} local + ${app.serverFacts.length} synced · ${storeTab === 'all' ? 'all stores' : storeTab === 'local' ? 'this device' : 'server'}`}
       actions={<><IconBtn name="upload" title="Import into memory" onClick={() => setImporting(true)} /><IconBtn name="plus" title="Add memory" onClick={() => setAdding(true)} /></>}
     >
-      <Input placeholder="Search memory" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search memory" />
-      <div style={{ marginTop: 10 }}>
-        <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, ...KINDS.map((k) => ({ value: k, label: k }))]} />
+      <div className="row wrap" style={{ gap: 8, marginBottom: 10 }}>
+        <Chips value={storeTab} onChange={(v) => setStoreTab(v as any)} options={[{ value: 'all', label: `All (${app.memory.length + app.serverFacts.length})` }, { value: 'local', label: `Local (${app.memory.length})` }, { value: 'server', label: `Synced (${app.serverFacts.length})` }]} />
       </div>
+      <Input placeholder="Search memory (checks text and tags)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search memory" />
+      <div style={{ marginTop: 10 }}>
+        <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All kinds' }, ...KINDS.map((k) => ({ value: k, label: k }))]} />
+      </div>
+      <Card tight>
+        <div className="muted" style={{ fontSize: '0.83rem', lineHeight: 1.6 }}>
+          <b>Local</b> lives in this browser. <b>Synced</b> lives on your server (Telegram/Assistant) and is merged into recall when signed in. 
+          Pinned + preferences always go into prompts. Others are recalled by keyword overlap + recency. 
+          Private mode neither recalls nor learns — <code className="inline">learnFrom</code> now checks per-conversation mode.
+        </div>
+      </Card>
 
       <Card tight>
         <div className="muted" style={{ fontSize: '0.83rem' }}>
@@ -113,21 +144,30 @@ export default function Memory() {
         <>
           <SectionTitle>{shown.length} item{shown.length === 1 ? '' : 's'}</SectionTitle>
           <div className="list">
-            {shown.map((m) => (
+            {shown.map((m: any) => (
               <div className="item" key={m.id} style={{ alignItems: 'flex-start' }}>
                 <span className={`ico${m.pinned ? '' : ' alt'}`}>
-                  <Icon name={KIND_ICON[m.kind] as never} size={15} />
+                  <Icon name={(KIND_ICON as any)[m.kind] ?? 'info' as never} size={15} />
                 </span>
                 <span className="txt">
                   <b style={{ whiteSpace: 'normal', fontWeight: 500, fontSize: '0.88rem' }}>{m.text}</b>
                   <small>
-                    {m.kind} &middot; {fmtWhen(m.created)}
-                    {m.source ? ` \u00b7 ${m.source}` : ''}
-                    {m.tags.length ? ` \u00b7 ${m.tags.join(', ')}` : ''}
+                    {m.kind} &middot; {m._location === 'server' ? 'synced from server' : fmtWhen(m.created)}
+                    {m.source ? ` · ${m.source}` : ''}
+                    {m._location ? ` · ${m._location}` : ''}
+                    {m.tags?.length ? ` · ${m.tags.join(', ')}` : ''}
+                    {m.pinned ? ' · pinned' : ''}
                   </small>
                 </span>
-                <IconBtn name="pin" title={m.pinned ? 'Unpin' : 'Pin'} active={m.pinned} onClick={() => app.togglePin(m.id)} />
-                <IconBtn name="trash" title="Delete" onClick={() => app.removeMemory(m.id)} />
+                {m._location === 'local' && (
+                  <>
+                    <IconBtn name="pin" title={m.pinned ? 'Unpin' : 'Pin'} active={m.pinned} onClick={() => app.togglePin(m.id)} />
+                    <IconBtn name="trash" title="Delete" onClick={() => app.removeMemory(m.id)} />
+                  </>
+                )}
+                {m._location === 'server' && (
+                  <span className="pill" style={{ fontSize: '0.7rem' }}><Icon name="cloud" size={10} /> server</span>
+                )}
               </div>
             ))}
           </div>

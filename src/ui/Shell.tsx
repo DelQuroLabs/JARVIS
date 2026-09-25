@@ -26,8 +26,8 @@ export const ROUTES: RouteDef[] = [
   { path: '/app/library', title: 'Library', short: 'Library', icon: 'boxes', group: 'Workspace' },
   { path: '/app/weather', title: 'Weather', short: 'Weather', icon: 'cloud-sun', group: 'Workspace' },
   { path: '/app/calendar', title: 'Calendar', short: 'Calendar', icon: 'clock', group: 'Workspace' },
-  { path: '/app/build', title: 'Build', short: 'Build', icon: 'grid', group: 'Automate', tab: true, hideInRail: true },
-  { path: '/app/more', title: 'More', short: 'More', icon: 'more', group: 'System', tab: true, hideInRail: true },
+  { path: '/app/build', title: 'Build', short: 'Build', icon: 'grid', group: 'Automate', tab: true },
+  { path: '/app/more', title: 'More', short: 'More', icon: 'more', group: 'System', tab: true },
 
   { path: '/app/workflows', title: 'Workflows', short: 'Flows', icon: 'flow', group: 'Automate' },
   { path: '/app/skills', title: 'Skills', short: 'Skills', icon: 'skills', group: 'Automate' },
@@ -40,6 +40,7 @@ export const ROUTES: RouteDef[] = [
   { path: '/app/traces', title: 'Activity', short: 'Activity', icon: 'trace', group: 'Knowledge' },
   { path: '/app/modes', title: 'Modes', short: 'Modes', icon: 'mode', group: 'Knowledge' },
 
+  { path: '/app/assistant', title: 'Assistant', short: 'Assistant', icon: 'assistant', group: 'System' },
   { path: '/app/cloud', title: 'Cloud sync', short: 'Cloud', icon: 'cloud', group: 'System' },
   { path: '/app/settings', title: 'Settings', short: 'Settings', icon: 'settings', group: 'System' },
   { path: '/app/providers', title: 'Providers & keys', short: 'Keys', icon: 'key', group: 'System' },
@@ -54,7 +55,7 @@ const isActive = (path: string, route: string): boolean => {
   if (path === '/app') return route === '/app' || route === '/app/';
   if (path === '/app/workflows') return route.startsWith('/app/workflows');
   if (path === '/app/build') return ['/app/build', '/app/workflows', '/app/skills', '/app/routines', '/app/crew', '/app/tools'].some((p) => route.startsWith(p));
-  if (path === '/app/more') return ['/app/more', '/app/memory', '/app/ideas', '/app/traces', '/app/modes', '/app/cloud', '/app/settings', '/app/providers', '/app/diagnostics', '/app/help'].some((p) => route.startsWith(p));
+  if (path === '/app/more') return ['/app/more', '/app/memory', '/app/ideas', '/app/traces', '/app/modes', '/app/assistant', '/app/cloud', '/app/settings', '/app/providers', '/app/diagnostics', '/app/help'].some((p) => route.startsWith(p));
   return route.startsWith(path);
 };
 
@@ -90,6 +91,24 @@ function ScreenExplainer({ route }: { route: string }) {
           <p>{info.what}</p>
           <p><b>When to use it.</b> {info.when}</p>
           <p className="lim"><b>What it will not do.</b> {info.limit}</p>
+          {info.next && (
+            <p>
+              <b>Try next:</b>{' '}
+              <button type="button" className="link" onClick={() => navigate(info.next!.path)}>
+                {info.next!.label}
+              </button>
+            </p>
+          )}
+          {info.related && info.related.length > 0 && (
+            <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
+              <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Related:</span>
+              {info.related.map((r) => (
+                <button key={r.path} type="button" className="chip" onClick={() => navigate(r.path)} style={{ fontSize: '0.78rem', padding: '2px 8px' }}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -288,20 +307,43 @@ function QuickFab() {
   );
 }
 
-/** Full-bleed shell used by Chat, which manages its own scrolling. */
+/** Full-bleed shell used by Chat, which manages its own scrolling. 
+ *  Fixed: now reuses shared header controls (offline pill, palette) so Chat doesn't feel like a different app.
+ */
 export function ChatShell({ title, sub, actions, children }: { title: string; sub?: string; actions?: ReactNode; children: ReactNode }) {
   const route = useRoute();
+  const app = useApp();
   return (
     <div className="app">
       <Rail route={route} />
       <div className="main">
+        <div className="aurora" aria-hidden="true" />
         <div className="chatwrap">
           <header className="appbar">
             <div className="grow">
               <h1>{title}</h1>
               {sub && <div className="sub">{sub}</div>}
             </div>
+            {!app.online && (
+              <span className="pill warn" title="No network connection">
+                <Icon name="warn" size={12} />
+                Offline
+              </span>
+            )}
             {actions}
+            <button
+              type="button"
+              className="cmdk"
+              title="Command palette"
+              aria-label="Open the command palette"
+              onPointerDown={() => haptic.light()}
+              onClick={() => {
+                globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+              }}
+            >
+              <Icon name="command" size={15} />
+              <span className="cmdk-hint">K</span>
+            </button>
           </header>
           {children}
         </div>

@@ -15,15 +15,23 @@ export interface Explainer {
   when: string;
   /** The honest edge. Never omitted. */
   limit: string;
+  /** One concrete next action to try */
+  next?: { label: string; path: string };
+  /** Related screens */
+  related?: { label: string; path: string }[];
 }
 
 export const EXPLAINERS: Record<string, Explainer> = {
   '/app': {
+    next: { label: 'Start a chat', path: '/app/chat' },
+    related: [{ label: 'Chat', path: '/app/chat' }, { label: 'Agent', path: '/app/agent' }, { label: 'Memory', path: '/app/memory' }],
     what: 'The front door. Type one line and it goes to the right place with no model call: "brief me" reads your day, "open memory" jumps there, "add expense 12 coffee" goes to the assistant, and anything else opens chat in the best-fit mode. Every destination is also a button below.',
     when: 'It is the first screen on open. Start typing, or tap a chip. Tap Rearrange to drag tiles into the order you actually use, or hide the ones you do not.',
     limit: 'Counts cover the last 24 hours of activity on this device only. Nothing is synced unless you connect your own server.',
   },
   '/app/chat': {
+    next: { label: 'Check what was remembered', path: '/app/memory' },
+    related: [{ label: 'Agent console', path: '/app/agent' }, { label: 'Memory', path: '/app/memory' }, { label: 'Modes', path: '/app/modes' }],
     what: 'A conversation with the agent. It can call tools mid-answer, and every call is shown with its arguments and result. Paste, drop or attach an image, take a photo, or on desktop grab one frame of a window so it can look at what you see; images ride along for that turn only and are dropped from storage afterwards.',
     when: 'Anything conversational, or when you want a tool run but do not want to find it by hand. Slash commands run instantly with no model.',
     limit: 'Without a model key it falls back to the offline reflex core, which handles arithmetic, memory and canned answers and says so rather than pretending to reason. Images need a vision-capable provider (OpenAI, Gemini, Anthropic, OpenRouter); other providers get the text alone and the composer says so.',
@@ -74,6 +82,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     limit: 'A browser tab cannot wake itself. Routines only fire while this app is open, which is why the schedule says "while open".',
   },
   '/app/memory': {
+    next: { label: 'Test recall in Chat', path: '/app/chat' },
+    related: [{ label: 'Chat', path: '/app/chat' }, { label: 'Assistant', path: '/app/assistant' }, { label: 'Settings', path: '/app/settings' }],
     what: 'Everything JARVIS remembers about you: what you saved by hand, what it learned from chats (tagged learned), and, when signed in, what the Telegram assistant learned. Every reply sees the relevant part of this automatically.',
     when: 'Review, pin, correct or delete. Pinned items and preferences go into every prompt; the rest is recalled by relevance to what you ask.',
     limit: 'Recall is capped at about 1,800 characters per turn so it never crowds out your question. Private mode neither recalls nor learns.',
@@ -104,6 +114,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     limit: 'Sync runs only while this tab is open. Your data is protected by your GitHub account.',
   },
   '/app/assistant': {
+    next: { label: 'Review server memory', path: '/app/memory' },
+    related: [{ label: 'Memory', path: '/app/memory' }, { label: 'Cloud sync', path: '/app/cloud' }, { label: 'Chat', path: '/app/chat' }],
     what: 'The executive-assistant layer: talk to JARVIS from Telegram, and manage expenses, contacts, email sending and its personality.',
     when: 'When you want JARVIS reachable from your phone without opening the app, or to log spending and people on the go.',
     limit: 'Needs your sync server signed in. The Telegram brain runs on the server with its own model key; the in-app chat still runs in this browser.',
@@ -124,6 +136,8 @@ export const EXPLAINERS: Record<string, Explainer> = {
     limit: 'Every number on it is counted at render time, so it stays true as features change.',
   },
   '/app/build': {
+    next: { label: 'Create a Skill', path: '/app/skills' },
+    related: [{ label: 'Workflows', path: '/app/workflows' }, { label: 'Skills', path: '/app/skills' }, { label: 'Tools', path: '/app/tools' }],
     what: 'The automation hub: skills, workflows, routines, crew and tools in one place.',
     when: 'When you want to build something that runs repeatedly rather than ask a one-off question.',
     limit: 'These are the pieces. The dashboard is where you launch them day to day.',
@@ -132,6 +146,15 @@ export const EXPLAINERS: Record<string, Explainer> = {
     what: 'Everything that is not chat or automation: knowledge, system settings and diagnostics.',
     when: 'Configuration, review and the occasional deep dive.',
     limit: 'Nothing here changes the agent behaviour except Modes, Providers and Settings.',
+    next: { label: 'Open Memory', path: '/app/memory' },
+    related: [{ label: 'Settings', path: '/app/settings' }, { label: 'Assistant', path: '/app/assistant' }],
+  },
+  '/app/not-found': {
+    what: 'The page you tried to open does not exist in this build.',
+    when: 'You followed an old link, typed a wrong path, or a feature moved.',
+    limit: 'It will not silently send you to the dashboard anymore — you get a search action instead.',
+    next: { label: 'Go to Overview', path: '/app' },
+    related: [{ label: 'Help', path: '/app/help' }, { label: 'Chat', path: '/app/chat' }],
   },
 };
 

@@ -36,6 +36,7 @@ const WeatherScreen = lazyScreen('WeatherScreen', () => import('./screens/Weathe
 const Calendar = lazyScreen('Calendar', () => import('./screens/Calendar.tsx'));
 const Hubs = lazyScreen('Hubs', async () => ({ default: (await import('./screens/Hubs.tsx')).Build }));
 const MoreHub = lazyScreen('MoreHub', async () => ({ default: (await import('./screens/Hubs.tsx')).More }));
+const NotFound = lazyScreen('NotFound', () => import('./screens/NotFound.tsx'));
 
 function Loading() {
   return (
@@ -159,8 +160,10 @@ function Router() {
         return <WeatherScreen />;
       case '/app/calendar':
         return <Calendar />;
+      case '/app/not-found':
+        return <NotFound />;
       default:
-        return <Home />;
+        return <NotFound />;
     }
   })();
 

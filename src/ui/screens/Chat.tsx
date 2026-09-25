@@ -14,6 +14,8 @@ import { detect } from '../../core/privacy.ts';
 import { fmtMs, fmtWhen, uid } from '../../core/util.ts';
 import { specOf } from '../../core/providers.ts';
 import { ATTACH_LIMIT, canCaptureScreen, canSee, captureScreenFrame, dataUrlBytes, downscaleImage, drainShareInbox, imageFilesFrom, sharePrompt } from '../../core/attach.ts';
+import { MemoryUsedDisclosure } from '../components/MemoryUsedDisclosure.tsx';
+import { selectRecall } from '../../core/recall.ts';
 
 const STARTERS = [
   'Plan a weekend trip to the Catskills on a $400 budget',
@@ -276,6 +278,7 @@ export default function Chat() {
           applied = true;
           app.toast(`Switched to ${modeOf(hint.id).name} mode`, 'ok');
         }
+        const memoriesUsed = selectRecall(app.memory, body, { extra: app.serverFacts });
         app.patchMessage(convId, botId, {
           content: cleanText,
           pending: false,
@@ -284,6 +287,7 @@ export default function Chat() {
           calls: result.calls,
           switchHint: hint ? { ...hint, applied } : undefined,
           modelHint,
+          memoriesUsed,
           receipt: {
             ms: Date.now() - t0,
             mode: mode.name,
@@ -295,7 +299,8 @@ export default function Chat() {
           },
         });
         // Learn in the background; never blocks the reply. Says what it kept.
-        void app.learnFrom(body, cleanText).then((saved) => {
+        // FIX: Pass per-conversation mode & privacy so private conversations are never learned
+        void app.learnFrom(body, cleanText, { mode: mode.id, privacy: app.settings.privacy, conversationId: convId }).then((saved) => {
           if (saved.length) app.toast(`Remembered: ${saved.map((x) => x.text).join(' · ').slice(0, 140)}`, 'ok');
         });
         app.addTrace({
@@ -421,6 +426,7 @@ export default function Chat() {
                 )}
                 {m.role === 'assistant' && !m.pending && m.modelHint && <ModelChip hint={m.modelHint} />}
                 {m.role === 'assistant' && !m.pending && m.receipt && <Receipt r={m.receipt} />}
+                {m.role === 'assistant' && !m.pending && (m as any).memoriesUsed && <MemoryUsedDisclosure items={(m as any).memoriesUsed} />}
                 {m.calls && <ToolCalls calls={m.calls} />}
               </div>
             </article>
