@@ -29,6 +29,10 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS key_vault (
     id         TEXT PRIMARY KEY,
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -185,4 +189,13 @@ export function putRow(table: string, uid: number, id: string, data: Record<stri
 }
 export function deleteRow(table: string, uid: number, id: string): boolean {
   return db.prepare(`DELETE FROM ${table} WHERE id = ? AND user_id = ?`).run(id, uid).changes > 0;
+}
+
+/** Tiny key/value store for server-level facts (e.g. who owns this deployment). */
+export function getMeta(key: string): string | null {
+  const row = db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+export function setMeta(key: string, value: string): void {
+  db.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value);
 }

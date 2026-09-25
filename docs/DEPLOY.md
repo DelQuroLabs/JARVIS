@@ -43,6 +43,8 @@ APP_URL=https://jarvis.delquro.com
 GITHUB_CLIENT_ID=…
 GITHUB_CLIENT_SECRET=…
 JWT_SECRET=<openssl rand -hex 32>
+ALLOWED_GITHUB_LOGINS=your-github-login      # who may log in; empty = first sign-in claims ownership
+SSO_COOKIE_DOMAIN=delquro.com                # optional: JARVIS as the front door for other *.delquro.com apps (§4c)
 OPENAI_API_KEY=sk-…
 # optional
 TELEGRAM_BOT_TOKEN=…
@@ -69,6 +71,72 @@ Deploy is handled by the Coolify GitHub App webhook (no secrets needed). If you 
 gate the deploy instead, turn **off** auto-deploy in Coolify and add repo secrets
 `COOLIFY_WEBHOOK` (the app's Deploy webhook URL from Coolify → app → Webhooks) and
 `COOLIFY_TOKEN` (Coolify → Keys & Tokens → API token); the workflow's `deploy` job then triggers it after checks pass.
+
+## 4b. Login / access control
+
+The site shows a **login wall** before anything loads (whenever GitHub OAuth is configured).
+Only allowed GitHub accounts get in:
+- `ALLOWED_GITHUB_LOGINS=alice,bob` → exactly those accounts.
+- unset → the **first** account to sign in becomes the owner and the door closes; add
+  others later via the env var (restart after changing it).
+Everything under `/api` (sync, assistant, memory, the OpenAI key) already required a
+valid token; the wall stops strangers from even reaching the app UI. Set
+`REQUIRE_LOGIN=false` to run it open (e.g. a purely local-first demo).
+
+## 4c. JARVIS as the front door for your other apps (SSO)
+
+Set `SSO_COOKIE_DOMAIN=delquro.com`. From then on a successful sign-in also leaves an
+HttpOnly `jarvis_sso` cookie on `.delquro.com`, and JARVIS answers
+`GET https://jarvis.delquro.com/api/auth/verify`:
+
+- **200** `{ok:true, login, name, avatar_url}` + headers `X-Auth-User`, `X-Auth-Name` —
+  signed in *and* still on the allow list.
+- **401** (or a 302 to sign in when called by a proxy) — not signed in / not allowed.
+
+Three ways to use it, from zero code to a few lines:
+
+**A. Any app on Coolify, zero code (Traefik ForwardAuth).** Coolify → the other app →
+*Advanced → Custom Docker labels* (or `labels:` in its compose), add:
+
+```
+traefik.http.middlewares.jarvis-auth.forwardauth.address=https://jarvis.delquro.com/api/auth/verify
+traefik.http.middlewares.jarvis-auth.forwardauth.trustForwardHeader=true
+traefik.http.middlewares.jarvis-auth.forwardauth.authResponseHeaders=X-Auth-User,X-Auth-Name
+traefik.http.routers.<that-app's-router-name>.middlewares=jarvis-auth
+```
+
+(The router name is in the labels Coolify already generated for that app — usually
+`http-0-<uuid>` / `https-0-<uuid>`. Attach the middleware to the https one.)
+Unauthenticated visitors are bounced to GitHub sign-in and returned to the exact URL
+they asked for. The app receives the user in the `X-Auth-User` request header.
+
+**B. A front end calling JARVIS directly.**
+
+```js
+const r = await fetch('https://jarvis.delquro.com/api/auth/verify?mode=json', { credentials: 'include' });
+if (r.status === 401) location.href = 'https://jarvis.delquro.com/api/auth/github?return_to=' + encodeURIComponent(location.href);
+const me = await r.json(); // { login, name, avatar_url }
+```
+
+**C. A Node/Express back end.**
+
+```js
+app.use(async (req, res, next) => {
+  const r = await fetch('https://jarvis.delquro.com/api/auth/verify?mode=json', { headers: { cookie: req.headers.cookie || '' } });
+  if (!r.ok) return res.redirect('https://jarvis.delquro.com/api/auth/github?return_to=' + encodeURIComponent(`https://${req.headers.host}${req.originalUrl}`));
+  req.user = await r.json();
+  next();
+});
+```
+
+Sign out everywhere: `https://jarvis.delquro.com/api/auth/logout?return_to=<url>`.
+`return_to` is only honoured for URLs on the SSO domain (no open redirect); everything
+else falls back to the JARVIS home. Who is allowed is still one setting:
+`ALLOWED_GITHUB_LOGINS`. Removing someone there locks them out of every app at once.
+
+Limits (by design): cookie SSO only works for apps on the same parent domain and in a
+browser. Native mobile apps or other domains would need the full OIDC provider — a
+planned extension, not part of this.
 
 ## 5. Ops notes
 

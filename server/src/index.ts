@@ -26,6 +26,8 @@ app.use('/api/*', cors({
 
 // Mount all API routes under /api
 app.route('/api', api);
+// Anything under /api that no route claimed is a JSON 404, never the SPA shell.
+app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));
 
 // Health check
 app.get('/healthz', (c) => c.json({ ok: true }));

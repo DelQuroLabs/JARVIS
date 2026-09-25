@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { match, useRoute } from './router.tsx';
 import { AppProvider, useApp } from './state.tsx';
 import { Btn, Pill, Sheet } from './components.tsx';
@@ -11,6 +11,8 @@ import { TOOL_MAP } from '../core/tools.ts';
 import Home from './screens/Home.tsx';
 import Chat from './screens/Chat.tsx';
 import { Landing, Guide, Privacy } from './screens/Site.tsx';
+import Login from './screens/Login.tsx';
+import * as api from '../core/api.ts';
 
 const Agent = lazyScreen('Agent', () => import('./screens/Agent.tsx'));
 const Tools = lazyScreen('Tools', () => import('./screens/Tools.tsx'));
@@ -165,6 +167,56 @@ function Router() {
   return <Suspense fallback={<Loading />}>{screen}</Suspense>;
 }
 
+/**
+ * Login wall. Asks the server once whether it requires login; if so and the
+ * stored token is missing or rejected, nothing else renders until sign-in.
+ * With no server (static hosting, offline first run) it resolves to "open".
+ */
+function Gate({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<'checking' | 'open' | 'locked'>('checking');
+  const [config, setConfig] = useState<api.AuthConfig | null>(null);
+  const [returnError, setReturnError] = useState('');
+  const app = useApp();
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      // Back from GitHub? The token (or the refusal) rides in the URL fragment.
+      const ret = api.consumeAuthReturn();
+      if (ret?.error) setReturnError(ret.error);
+      const cfg = await api.authConfig();
+      if (!alive) return;
+      setConfig(cfg);
+      if (!cfg?.requireLogin) { setState('open'); return; }
+      const me = api.isSignedIn() ? await api.currentUser() : null;
+      if (!alive) return;
+      if (me) {
+        if (ret?.token && !app.cloud.enabled) app.setCloud({ ...app.cloud, enabled: true, serverUrl: app.cloud.serverUrl || globalThis.location.origin });
+        if (ret?.token) void app.refreshServerFacts();
+        setState('open');
+        return;
+      }
+      api.signOut();
+      setState('locked');
+    })();
+    return () => { alive = false; };
+  }, []);
+  if (state === 'checking') return <Loading />;
+  if (state === 'locked' && config) {
+    return (
+      <Login
+        config={config}
+        initialError={returnError}
+        onSignedIn={() => {
+          if (!app.cloud.enabled) app.setCloud({ ...app.cloud, enabled: true, serverUrl: app.cloud.serverUrl || globalThis.location.origin });
+          void app.refreshServerFacts();
+          setState('open');
+        }}
+      />
+    );
+  }
+  return <>{children}</>;
+}
+
 function Chrome() {
   const [palette, setPalette] = useState(false);
   usePaletteShortcut(setPalette);
@@ -182,7 +234,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AppProvider>
-        <Chrome />
+        <Gate>
+          <Chrome />
+        </Gate>
       </AppProvider>
     </ErrorBoundary>
   );

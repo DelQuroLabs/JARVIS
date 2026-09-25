@@ -3,7 +3,9 @@
 import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import jwt from 'jsonwebtoken';
-import { db, upsertUser, findUserById, type DBUser } from './db.js';
+import { SSO_COOKIE, ssoCookieDomain, safeReturnTo, isTrustedOrigin, parseCookies, ssoSetCookie, ssoClearCookie, forwardedUrl } from './sso.js';
+import { randomBytes } from 'node:crypto';
+import { db, upsertUser, findUserById, getMeta, setMeta, type DBUser } from './db.js';
 
 type Env = { Variables: { user: JWTPayload } };
 export const api = new Hono<Env>();
@@ -18,11 +20,18 @@ interface JWTPayload {
 }
 
 /** Extract and verify the Bearer token. Sets c.set('user', ...). */
-const authMiddleware = createMiddleware<Env>(async (c, next) => {
+/** Session token from the Authorization header, else the SSO cookie. */
+function tokenFrom(c: { req: { header: (n: string) => string | undefined } }): string | null {
   const header = c.req.header('Authorization');
-  if (!header?.startsWith('Bearer ')) return c.json({ error: 'Not authenticated' }, 401);
+  if (header?.startsWith('Bearer ')) return header.slice(7);
+  return parseCookies(c.req.header('Cookie'))[SSO_COOKIE] || null;
+}
+
+const authMiddleware = createMiddleware<Env>(async (c, next) => {
+  const token = tokenFrom(c);
+  if (!token) return c.json({ error: 'Not authenticated' }, 401);
   try {
-    const payload = jwt.verify(header.slice(7), JWT_SECRET) as JWTPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
     c.set('user', payload);
     await next();
   } catch {
@@ -36,20 +45,90 @@ const GH_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
 const GH_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-// Step 1: redirect the browser to GitHub
+/**
+ * Who may sign in. This is a personal deployment: without a gate, anyone with a
+ * GitHub account could log in and spend the server's OpenAI key.
+ *  - ALLOWED_GITHUB_LOGINS="alice,bob" → only those logins (case-insensitive).
+ *  - unset → the FIRST person to sign in becomes the owner and the door closes
+ *    behind them (recorded in the DB; add more people via the env var).
+ * REQUIRE_LOGIN=false turns the client-side wall off (API stays authenticated).
+ */
+const ALLOWED = new Set((process.env.ALLOWED_GITHUB_LOGINS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+const SSO_DOMAIN = ssoCookieDomain();
+const SECURE = () => APP_URL.startsWith('https');
+const REQUIRE_LOGIN = (process.env.REQUIRE_LOGIN ?? (GH_CLIENT_ID ? 'true' : 'false')) !== 'false';
+
+function isAllowed(login: string): { ok: boolean; reason?: string } {
+  const l = login.toLowerCase();
+  if (ALLOWED.size) return ALLOWED.has(l) ? { ok: true } : { ok: false, reason: 'not on the allow list' };
+  const owner = getMeta('owner_login');
+  if (!owner) { setMeta('owner_login', l); return { ok: true }; }
+  return owner === l ? { ok: true } : { ok: false, reason: 'this JARVIS already has an owner' };
+}
+
+/** Public: tells the client whether to show the login wall before the app. */
+api.get('/auth/config', (c) => c.json({
+  requireLogin: REQUIRE_LOGIN,
+  configured: !!GH_CLIENT_ID && !!GH_CLIENT_SECRET,
+  gate: ALLOWED.size ? 'allowlist' : getMeta('owner_login') ? 'owner' : 'first-user-claims',
+  sso: SSO_DOMAIN || null,
+}));
+
+const STATE_COOKIE = 'jarvis_oauth_state';
+const cookieOpts = () => `Path=/api/auth; HttpOnly; SameSite=Lax; Max-Age=600${APP_URL.startsWith('https') ? '; Secure' : ''}`;
+
+// Step 1: redirect the browser to GitHub (with a CSRF state nonce)
 api.get('/auth/github', (c) => {
+  if (!GH_CLIENT_ID) return c.text('GitHub sign-in is not configured on this server (GITHUB_CLIENT_ID missing).', 503);
+  const state = randomBytes(16).toString('hex');
+  // Where to land in the app afterwards (a hash route only; nothing else is honoured).
+  const back = (c.req.query('back') || '').replace(/[^#/A-Za-z0-9_-]/g, '').slice(0, 80);
+  // Sibling apps send an absolute return_to; only trusted hosts survive.
+  const returnTo = safeReturnTo(c.req.query('return_to'), APP_URL, SSO_DOMAIN);
+  c.header('Set-Cookie', `${STATE_COOKIE}=${state}.${encodeURIComponent(returnTo || back)}; ${cookieOpts()}`);
   const params = new URLSearchParams({
     client_id: GH_CLIENT_ID,
     redirect_uri: `${APP_URL}/api/auth/github/callback`,
     scope: 'read:user',
+    state,
   });
   return c.redirect(`https://github.com/login/oauth/authorize?${params}`);
 });
 
-// Step 2: GitHub redirects back here with ?code=...
+/**
+ * End of the sign-in dance: send the browser back to the app with the result
+ * in the URL fragment. Fragments never reach a server or its logs, and a
+ * plain redirect works where pop-ups and postMessage are blocked.
+ */
+const finish = (r: { token?: string; error?: string; back?: string }) => {
+  const headers = new Headers({ 'Cache-Control': 'no-store' });
+  if (r.token && SSO_DOMAIN) headers.append('Set-Cookie', ssoSetCookie(r.token, SSO_DOMAIN, SECURE()));
+  const absolute = safeReturnTo(r.back, APP_URL, SSO_DOMAIN);
+  if (absolute && !absolute.startsWith(APP_URL)) {
+    // A sibling app sent this visitor. Success: straight back, the cookie does the rest.
+    // Failure: show the message on the JARVIS wall instead.
+    if (r.token) { headers.set('Location', absolute); return new Response(null, { status: 302, headers }); }
+    headers.set('Location', `${APP_URL}/#auth_error=${encodeURIComponent(r.error || 'Sign-in failed')}`);
+    return new Response(null, { status: 302, headers });
+  }
+  const q = r.token ? `#auth=${encodeURIComponent(r.token)}` : `#auth_error=${encodeURIComponent(r.error || 'Sign-in failed')}`;
+  const back = r.back && !absolute ? `&back=${encodeURIComponent(r.back)}` : '';
+  headers.set('Location', `${APP_URL}/${q}${back}`);
+  return new Response(null, { status: 302, headers });
+};
+
+// Step 2: GitHub redirects back here with ?code=...&state=...
 api.get('/auth/github/callback', async (c) => {
   const code = c.req.query('code');
-  if (!code) return c.text('Missing code', 400);
+  if (!code) return finish({ error: c.req.query('error_description') || 'GitHub did not return a code.' });
+  const state = c.req.query('state') || '';
+  const raw = (c.req.header('Cookie') || '').split(/;\s*/).find((x) => x.startsWith(`${STATE_COOKIE}=`))?.slice(STATE_COOKIE.length + 1) || '';
+  const dot = raw.indexOf('.');
+  const cookie = dot === -1 ? raw : raw.slice(0, dot);
+  const back = dot === -1 ? '' : decodeURIComponent(raw.slice(dot + 1));
+  c.header('Set-Cookie', `${STATE_COOKIE}=; Path=/api/auth; Max-Age=0`);
+  if (!state || !cookie || state !== cookie) return finish({ error: 'Sign-in state mismatch (cookies blocked or the link expired). Try again.' });
+  const finishBack = (r: { token?: string; error?: string }) => finish({ ...r, back });
 
   // Exchange code for access token
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -65,7 +144,7 @@ api.get('/auth/github/callback', async (c) => {
     }),
   });
   const tokenData = (await tokenRes.json()) as { access_token?: string; error?: string };
-  if (!tokenData.access_token) return c.text(`OAuth failed: ${tokenData.error}`, 400);
+  if (!tokenData.access_token) return finishBack({ error: `GitHub rejected the sign-in (${tokenData.error || 'unknown error'}).` });
 
   // Fetch user profile
   const ghRes = await fetch('https://api.github.com/user', {
@@ -75,32 +154,16 @@ api.get('/auth/github/callback', async (c) => {
     },
   });
   const gh = (await ghRes.json()) as { id: number; login: string; name: string | null; avatar_url: string | null };
+  if (!gh?.login) return finishBack({ error: 'GitHub did not return a profile.' });
+
+  const gate = isAllowed(gh.login);
+  if (!gate.ok) return finishBack({ error: `Signed in as @${gh.login}, but this JARVIS is private (${gate.reason ?? 'not allowed'}). Ask the owner to add you to ALLOWED_GITHUB_LOGINS.` });
 
   // Upsert local user and mint JWT
   const user = upsertUser(gh.id, gh.login, gh.name, gh.avatar_url);
   const token = jwt.sign({ uid: user.id, login: user.login } satisfies JWTPayload, JWT_SECRET, { expiresIn: '90d' });
 
-  // Return an HTML page that posts the token to the opener and closes.
-  // This is the popup-based OAuth pattern — the opener (Cloud screen) receives
-  // the token via postMessage and stores it.
-  return c.html(`<!DOCTYPE html>
-<html><head><title>Signing in…</title></head>
-<body style="font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0;background:#111;color:#eee">
-  <p>Signing you in…</p>
-  <script>
-    try {
-      if (window.opener) {
-        window.opener.postMessage({ type: 'jarvis-auth', token: '${token}', user: ${JSON.stringify(JSON.stringify({ login: user.login, name: user.name, avatar_url: user.avatar_url }))} }, '*');
-        window.close();
-      } else {
-        // Fallback: redirect with token in hash (won't be sent to server)
-        window.location.href = '${APP_URL}#/app/cloud?token=${token}';
-      }
-    } catch(e) {
-      document.body.textContent = 'Auth succeeded but the parent window closed. Close this tab and return to JARVIS.';
-    }
-  </script>
-</body></html>`);
+  return finishBack({ token });
 });
 
 // Return current user from the token
@@ -109,6 +172,57 @@ api.get('/auth/me', authMiddleware, (c) => {
   const user = findUserById(uid);
   if (!user) return c.json({ error: 'User not found' }, 404);
   return c.json({ login: user.login, name: user.name, avatar_url: user.avatar_url });
+});
+
+// ---------- SSO for sibling apps ----------
+
+/**
+ * "Is this browser signed in and allowed?" for other apps on the SSO domain.
+ * Works two ways:
+ *  - Traefik/Coolify ForwardAuth: proxy calls this with the visitor's cookies
+ *    and X-Forwarded-*; 200 lets the request through (X-Auth-User set),
+ *    anything else and the visitor is redirected to sign in and brought back.
+ *  - Direct fetch from an app's front end with credentials: 'include' -
+ *    200 + JSON user, or 401.
+ * Add ?mode=json to get a 401 instead of a redirect when unauthenticated.
+ */
+api.get('/auth/verify', (c) => {
+  const origin = c.req.header('Origin');
+  if (origin && isTrustedOrigin(origin, APP_URL, SSO_DOMAIN)) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+    c.header('Vary', 'Origin');
+  }
+  c.header('Cache-Control', 'no-store');
+  const token = tokenFrom(c);
+  let user: DBUser | undefined;
+  if (token) {
+    try {
+      const { uid } = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      user = findUserById(uid);
+      if (user && !isAllowed(user.login).ok) user = undefined; // allow list can shrink later
+    } catch { user = undefined; }
+  }
+  if (user) {
+    c.header('X-Auth-User', user.login);
+    c.header('X-Auth-Name', user.name || '');
+    return c.json({ ok: true, login: user.login, name: user.name, avatar_url: user.avatar_url });
+  }
+  const wanted = forwardedUrl((n) => c.req.header(n));
+  const wantsJson = c.req.query('mode') === 'json' || !wanted || (c.req.header('Accept') || '').includes('application/json');
+  if (wantsJson) return c.json({ ok: false, error: 'Not authenticated', login_url: `${APP_URL}/api/auth/github` }, 401);
+  return c.redirect(`${APP_URL}/api/auth/github?return_to=${encodeURIComponent(wanted)}`, 302);
+});
+
+/** Sign out everywhere on the SSO domain (cookie), then go back. */
+api.get('/auth/logout', (c) => {
+  if (SSO_DOMAIN) c.header('Set-Cookie', ssoClearCookie(SSO_DOMAIN, SECURE()));
+  const to = safeReturnTo(c.req.query('return_to'), APP_URL, SSO_DOMAIN) || `${APP_URL}/`;
+  return c.redirect(to, 302);
+});
+api.post('/auth/logout', (c) => {
+  if (SSO_DOMAIN) c.header('Set-Cookie', ssoClearCookie(SSO_DOMAIN, SECURE()));
+  return c.json({ ok: true });
 });
 
 // ---------- Sync ----------

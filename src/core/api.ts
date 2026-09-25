@@ -79,34 +79,49 @@ export interface AuthUser {
   avatar_url: string | null;
 }
 
-/** Open GitHub OAuth in a popup. Returns a promise that resolves with the user. */
-export function signInWithGitHub(serverUrl: string): Promise<{ ok: boolean; user?: AuthUser; error?: string }> {
-  return new Promise((resolve) => {
-    window.open(
-      `${serverUrl}/api/auth/github`,
-      'jarvis-auth',
-      'width=500,height=700,popup=yes',
-    );
+export interface AuthConfig { requireLogin: boolean; configured: boolean; gate: 'allowlist' | 'owner' | 'first-user-claims' }
 
-    const handler = (e: MessageEvent) => {
-      if (e.data?.type !== 'jarvis-auth') return;
-      window.removeEventListener('message', handler);
-      if (e.data.token) {
-        setToken(e.data.token);
-        const user = JSON.parse(e.data.user) as AuthUser;
-        resolve({ ok: true, user });
-      } else {
-        resolve({ ok: false, error: e.data.error || 'Auth failed' });
-      }
-    };
-    window.addEventListener('message', handler);
+/**
+ * Does this server want a login wall? Fails open to "no wall" when there is no
+ * server at all (pure static / local-first use) - the wall protects the
+ * server's resources, not the on-device app.
+ */
+export async function authConfig(): Promise<AuthConfig | null> {
+  try {
+    const res = await fetch(`${apiBase()}/auth/config`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return (await res.json()) as AuthConfig;
+  } catch {
+    return null;
+  }
+}
 
-    // Timeout after 5 minutes
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      resolve({ ok: false, error: 'Sign-in timed out' });
-    }, 300_000);
-  });
+/**
+ * Start GitHub sign-in with a full-page redirect (no pop-up, so pop-up
+ * blockers and privacy browsers cannot swallow it). The server sends the
+ * browser back to the app with the token in the URL fragment, which
+ * consumeAuthReturn() picks up on the next boot.
+ */
+export function signInWithGitHub(serverUrl = ''): void {
+  const back = encodeURIComponent(globalThis.location.hash || '');
+  globalThis.location.assign(`${serverUrl}/api/auth/github?back=${back}`);
+}
+
+/**
+ * Called once on boot: if the URL fragment carries the result of a sign-in
+ * redirect (#auth=<token>&back=... or #auth_error=<msg>), store the token,
+ * scrub the fragment from the address bar and report what happened.
+ */
+export function consumeAuthReturn(): { token?: string; error?: string; back?: string } | null {
+  const hash = globalThis.location.hash || '';
+  const m = hash.match(/^#auth(_error)?=([^&]*)(?:&back=([^&]*))?/);
+  if (!m) return null;
+  const value = decodeURIComponent(m[2] || '');
+  const back = m[3] ? decodeURIComponent(m[3]) : '';
+  const out = m[1] ? { error: value || 'Sign-in failed', back } : { token: value, back };
+  if (out.token) setToken(out.token);
+  try { history.replaceState(null, '', globalThis.location.pathname + globalThis.location.search + (back || '')); } catch { /* fine */ }
+  return out;
 }
 
 /** Check who we are (from the stored token). */
@@ -122,6 +137,8 @@ export async function currentUser(): Promise<AuthUser | null> {
 
 export function signOut(): void {
   setToken(null);
+  // Also drop the domain-wide SSO cookie, if the server set one. Fire and forget.
+  try { void fetch(`${apiBase()}/auth/logout`, { method: 'POST', credentials: 'include', keepalive: true }).catch(() => {}); } catch { /* offline */ }
 }
 
 export function isSignedIn(): boolean {

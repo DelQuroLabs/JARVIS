@@ -22,18 +22,6 @@ export default function Cloud() {
     void api.currentUser().then(setUser, () => setUser(null));
   }, [connected]);
 
-  // Also capture token from URL hash (fallback if popup postMessage fails)
-  useEffect(() => {
-    const hash = globalThis.location.hash;
-    const match = hash.match(/[?&]token=([^&]+)/);
-    if (match) {
-      api.setToken(match[1]);
-      // Clean the URL
-      globalThis.location.hash = '#/app/cloud';
-      void api.currentUser().then(setUser);
-    }
-  }, []);
-
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
     try {
@@ -45,16 +33,8 @@ export default function Cloud() {
     }
   };
 
-  const signIn = () =>
-    void run('github', async () => {
-      const result = await api.signInWithGitHub(app.cloud.serverUrl);
-      if (result.ok && result.user) {
-        setUser(result.user);
-        app.toast(`Signed in as ${result.user.login}`, 'ok');
-      } else {
-        app.toast(result.error ?? 'Sign-in failed', 'err');
-      }
-    });
+  // Redirect flow: the app boots again on return and the Gate picks up the token.
+  const signIn = () => api.signInWithGitHub(app.cloud.serverUrl);
 
   return (
     <Shell title="Cloud sync" sub={connected ? (user ? `Signed in as ${user.login}` : 'Connected, signed out') : 'Optional \u00b7 off by default'}>
